@@ -3,13 +3,12 @@ package yamlloader
 import (
 	"fmt"
 	"gopkg.in/yaml.v3"
-	"io/ioutil"
 	"os"
 )
 
 // Load - loads yaml file to object or returns error
 func Load(path string, o interface{}) error {
-	file, err := ioutil.ReadFile(path)
+	file, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
