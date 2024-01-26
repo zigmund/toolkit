@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/writer"
+	"io"
 	"os"
 )
 
@@ -13,6 +15,7 @@ type (
 		Format       string `yaml:"format"`
 		Timestamp    bool   `yaml:"timestamp"`
 		ReportCaller bool   `yaml:"reportCaller"`
+		SplitOutput  bool   `yaml:"splitOutput"`
 	}
 )
 
@@ -23,12 +26,12 @@ const (
 
 // Configure - configures logrus using Options
 func Configure(options Options) (err error) {
-	lever, err := logrus.ParseLevel(options.Level)
+	level, err := logrus.ParseLevel(options.Level)
 	if err != nil {
 		return err
 	}
 
-	logrus.SetLevel(lever)
+	logrus.SetLevel(level)
 	logrus.SetReportCaller(options.ReportCaller)
 
 	switch options.Format {
@@ -38,6 +41,28 @@ func Configure(options Options) (err error) {
 		logrus.SetFormatter(&logrus.TextFormatter{DisableTimestamp: !options.Timestamp, FullTimestamp: true})
 	default:
 		return errors.New(fmt.Sprintf("unknown logger format: %s", options.Format))
+	}
+
+	// https://github.com/sirupsen/logrus/tree/f104497f2b2129ab888fd274891f3a278756bcde/hooks/writer
+	if options.SplitOutput {
+		logrus.SetOutput(io.Discard)
+		logrus.AddHook(&writer.Hook{
+			Writer: os.Stderr,
+			LogLevels: []logrus.Level{
+				logrus.PanicLevel,
+				logrus.FatalLevel,
+				logrus.ErrorLevel,
+				logrus.WarnLevel,
+			},
+		})
+		logrus.AddHook(&writer.Hook{
+			Writer: os.Stdout,
+			LogLevels: []logrus.Level{
+				logrus.InfoLevel,
+				logrus.DebugLevel,
+				logrus.TraceLevel,
+			},
+		})
 	}
 
 	return nil
